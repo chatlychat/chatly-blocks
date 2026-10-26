@@ -1,0 +1,63 @@
+{
+  "name": "@chatlychat/blocks",
+  "version": "0.1.0",
+  "description": "Build and check Chatly block envelopes: typed blocks, cards and actions, small builders, and validate() that returns exactly what the server would refuse. Isomorphic, zero dependencies.",
+  "license": "MIT",
+  "homepage": "https://github.com/chatlychat/chatly-blocks#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chatlychat/chatly-blocks.git"
+  },
+  "bugs": {
+    "url": "https://github.com/chatlychat/chatly-blocks/issues"
+  },
+  "keywords": [
+    "chatly",
+    "chat",
+    "bot",
+    "blocks",
+    "cards",
+    "validation",
+    "sdk"
+  ],
+  "author": "Chatly",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.spec.*",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "verify:pack": "node ../../scripts/verify-package-tarball.mjs packages/blocks",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && vitest run"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8",
+    "vitest": "^2.1.2",
+    "zod": "^3.25.76"
+  }
+}
