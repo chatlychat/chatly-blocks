@@ -2,7 +2,7 @@
 
 ## 0.1.0 — 2026-10-26
 
-First release (not yet published).
+First release.
 
 - Block, card and action types as discriminated unions (`Block` on `type`, `Action` on `kind`).
 - Builders: `envelope`, `block.*`, `action.*`.
