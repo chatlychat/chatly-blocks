@@ -1,5 +1,10 @@
 # @chatlychat/blocks
 
+## 0.2.0 — 2026-10-26
+
+- `navigate` is accepted as a card's tap target and as a grid's `more` tile: `CardTapAction` and `PagingAction` gain `NavigateAction` (`card.action: action.navigate('Pricing', '/pricing')`).
+- `ref` on `card` and on cards inside `card_grid`: a stable string the bot owns (1-128 of `[A-Za-z0-9:._-]`), used by `PATCH /v1/bot/cards?ref=` to revise every card carrying it across conversations. `block.card('T', { ref: 'listing:123' })`.
+
 ## 0.1.0 — 2026-10-26
 
 First release.

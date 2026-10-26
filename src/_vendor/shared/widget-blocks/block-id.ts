@@ -19,3 +19,7 @@ export const blockId = z
   .min(1)
   .max(64)
   .regex(/^[A-Za-z0-9._:-]+$/);
+
+/** A bot-owned stable key on a card, addressed by `PATCH /v1/bot/cards?ref=`. */
+export const CARD_REF_RE = /^[A-Za-z0-9:._-]{1,128}$/;
+export const cardRef = z.string().regex(CARD_REF_RE);

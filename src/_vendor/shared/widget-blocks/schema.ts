@@ -19,7 +19,7 @@
 import { z } from 'zod';
 
 import { cardTapActionSchema, widgetActionSchema } from './actions.js';
-import { blockId } from './block-id.js';
+import { blockId, cardRef } from './block-id.js';
 import {
   MAX_FIELDS_PER_BLOCK,
   MAX_ORDER_STATUS_STEPS,
@@ -81,6 +81,8 @@ export const MAX_QUICK_REPLIES = 8;
 const cardBodySchema = z
   .object({
     id: blockId.optional(),
+    /** Stable key the bot owns (`listing:123`); `PATCH /v1/bot/cards?ref=` rewrites every card carrying it. */
+    ref: cardRef.optional(),
     title: z.string().min(1).max(200),
     subtitle: z.string().min(1).max(400).optional(),
     image: mediaSrcSchema.optional(),

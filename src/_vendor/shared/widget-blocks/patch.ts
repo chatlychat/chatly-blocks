@@ -115,3 +115,44 @@ export function applyBlockPatches(
     ? { ok: true, envelope: parsed.data }
     : { ok: false, reason: 'invalid_result' };
 }
+
+/**
+ * Merge `set` into EVERY card (top level or in a grid) whose `ref` equals
+ * `ref`. A card is addressed by `ref` rather than `id` because `id` is optional
+ * and per-message; `ref` is the bot's own stable key. Same rules as
+ * `applyBlockPatches`: `type`/`id` are not settable, the whole envelope is
+ * re-validated, and no match is `unknown_id`.
+ */
+export function applyCardSetByRef(
+  envelope: WidgetBlocksEnvelope,
+  ref: string,
+  set: Record<string, unknown>,
+): BlockPatchResult {
+  if ('type' in set || 'id' in set) {
+    return { ok: false, reason: 'invalid_result' };
+  }
+  let hits = 0;
+  const merge = (card: Record<string, unknown>): Record<string, unknown> => {
+    if (card['ref'] !== ref) {
+      return card;
+    }
+    hits += 1;
+    return { ...card, ...set };
+  };
+  const blocks = envelope.blocks.map((block) => {
+    const copy: Record<string, unknown> = merge({ ...block });
+    if (Array.isArray(copy['cards'])) {
+      copy['cards'] = (copy['cards'] as unknown[]).map((c) =>
+        typeof c === 'object' && c !== null ? merge({ ...(c as Record<string, unknown>) }) : c,
+      );
+    }
+    return copy;
+  });
+  if (hits === 0) {
+    return { ok: false, reason: 'unknown_id' };
+  }
+  const parsed = widgetBlocksEnvelopeSchema.safeParse({ v: envelope.v, blocks });
+  return parsed.success
+    ? { ok: true, envelope: parsed.data }
+    : { ok: false, reason: 'invalid_result' };
+}

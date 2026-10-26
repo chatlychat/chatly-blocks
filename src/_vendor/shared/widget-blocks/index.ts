@@ -60,8 +60,10 @@ export {
 export { readBlocksEnvelope } from './read-envelope.js';
 export { navigateLinks, type NavigateLink } from './navigate-links.js';
 export { blocksToPlainText, NO_TEXT_CONTENT } from './plain-text.js';
+export { CARD_REF_RE } from './block-id.js';
 export {
   applyBlockPatches,
+  applyCardSetByRef,
   blockPatchSchema,
   type BlockPatch,
   type BlockPatchResult,

@@ -1,6 +1,6 @@
 {
   "name": "@chatlychat/blocks",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Build and check Chatly block envelopes: typed blocks, cards and actions, small builders, and validate() that returns exactly what the server would refuse. Isomorphic, zero dependencies.",
   "license": "MIT",
   "homepage": "https://github.com/chatlychat/chatly-blocks#readme",

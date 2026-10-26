@@ -319,15 +319,16 @@ export type WidgetAction = z.infer<typeof widgetActionSchema>;
 export const pagingActionSchema = z.discriminatedUnion('kind', [
   urlActionSchema,
   postbackActionSchema,
+  navigateActionSchema,
 ]);
 
-/** A `url` or `postback` action — what a grid's overflow tile may carry. */
+/** A `url`, `postback` or `navigate` action — what a grid's overflow tile may carry. */
 export type PagingAction = z.infer<typeof pagingActionSchema>;
 
 /**
  * What a CARD's image and title may fire when tapped.
  *
- * `url`, `host_event` and `step`: the three kinds that mean "go somewhere" or
+ * `url`, `host_event`, `step` and `navigate`: the four kinds that mean "go somewhere" or
  * "do the thing this card is about". The same declarations the full union
  * uses, narrowed — not restated.
  *
@@ -344,6 +345,7 @@ export const cardTapActionSchema = z.discriminatedUnion('kind', [
   urlActionSchema,
   hostEventActionSchema,
   stepActionSchema,
+  navigateActionSchema,
 ]);
 
 /** What `card.action` carries. */

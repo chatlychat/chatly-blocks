@@ -35,8 +35,8 @@ export function navigateLinks(blocks: unknown): NavigateLink[] {
     } else if (block.type === 'card') {
       takeCard(block);
     } else if (block.type === 'card_grid') {
-      // `more.action` is a `url` or `postback` by schema, never a navigate.
       block.cards.forEach(takeCard);
+      take(block.more?.action);
     }
   }
   return out;

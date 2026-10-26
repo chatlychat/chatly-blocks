@@ -36,7 +36,10 @@ export function readCardTapAction(
   if (action === null) {
     return null;
   }
-  return action.kind === 'url' || action.kind === 'host_event' || action.kind === 'step'
+  return action.kind === 'url' ||
+    action.kind === 'host_event' ||
+    action.kind === 'step' ||
+    action.kind === 'navigate'
     ? action
     : null;
 }

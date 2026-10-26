@@ -77,7 +77,7 @@ function readVariants(raw: unknown): Bag[] {
 /**
  * A grid's trailing "more" tile, or null.
  *
- * Narrowed to the two action kinds that can page, matching the write schema:
+ * Narrowed to the three action kinds that can page, matching the write schema:
  * a `copy`, `host_event` or `step` tile would render as a button that shows no
  * more cards. Dropping the tile keeps the grid — twenty-four cards are the
  * substance and a missing affordance for the twenty-fifth is not worth losing
@@ -88,7 +88,10 @@ function readGridMore(raw: unknown): Bag | null {
     return null;
   }
   const action = readAction(raw['action']);
-  if (action === null || (action.kind !== 'postback' && action.kind !== 'url')) {
+  if (
+    action === null ||
+    (action.kind !== 'postback' && action.kind !== 'url' && action.kind !== 'navigate')
+  ) {
     return null;
   }
   return { ...raw, action };
