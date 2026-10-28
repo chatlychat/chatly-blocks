@@ -23,11 +23,13 @@ import { blockId, cardRef } from './block-id.js';
 import {
   MAX_FIELDS_PER_BLOCK,
   MAX_ORDER_STATUS_STEPS,
+  MAX_SOURCES,
   MAX_VARIANTS_PER_CARD,
   fieldSchema,
   gridMoreSchema,
   moneySchema,
   orderStatusStepSchema,
+  sourceSchema,
   stockSchema,
   variantSchema,
 } from './block-values.js';
@@ -46,7 +48,7 @@ export { MAX_TABLE_COLUMNS, MAX_TABLE_ROWS } from './table-schema.js';
  * of the limits imports them from the schema, and a split is not a reason to
  * make them learn a second path.
  */
-export { MAX_FIELDS_PER_BLOCK, MAX_ORDER_STATUS_STEPS, MAX_VARIANTS_PER_CARD };
+export { MAX_FIELDS_PER_BLOCK, MAX_ORDER_STATUS_STEPS, MAX_SOURCES, MAX_VARIANTS_PER_CARD };
 
 /** Caps. Chosen to be generous for real cards and hostile to accidents. */
 export const MAX_BLOCKS_PER_MESSAGE = 50;
@@ -98,11 +100,15 @@ const cardBodySchema = z
     price: moneySchema.optional(),
     fields: z.array(fieldSchema).max(MAX_FIELDS_PER_BLOCK).optional(),
     /**
-     * Pickable options, rendered as a select.
+     * Pickable options. The web widget draws them as chips the shopper
+     * chooses from; every other surface shows what was offered. See
+     * `variantSchema` in `block-values.ts` for where the choice then goes —
+     * and note that no surface has ever rendered the `<select>` this comment
+     * promised until 2026-10-28.
      *
-     * `.min(1)` as well as `.max`: an empty array is a dropdown with nothing
-     * in it, which is a control a shopper can focus and not use. An author
-     * with no options omits the key.
+     * `.min(1)` as well as `.max`: an empty array is a row of nothing, which
+     * is a control a shopper can focus and not use. An author with no options
+     * omits the key.
      */
     variants: z.array(variantSchema).min(1).max(MAX_VARIANTS_PER_CARD).optional(),
     stock: stockSchema.optional(),
@@ -352,6 +358,45 @@ export const widgetBlockSchema = z.discriminatedUnion('type', [
       steps: z.array(orderStatusStepSchema).min(1).max(MAX_ORDER_STATUS_STEPS),
     })
     .strict(),
+  /**
+   * Where the answer came from — the articles a RAG reply is grounded in.
+   *
+   * CLAUDE.md §4 has required this since the AI layer shipped ("RAG queries
+   * always cite source IDs back to the caller for UI display") and no surface
+   * rendered it: `apps/ai/src/rag/rag.service.ts` returned `articleId` per hit
+   * to its caller, `messages.blocks` had nowhere to put it, and the visitor
+   * was told the answer with no way to check it.
+   *
+   * ── Why a BLOCK and not a `messages.sources` column ───────────────────
+   *
+   * A column would need a migration, a place in the message DTO, and a reader
+   * on each of the four surfaces that draw a message — and then a fifth
+   * reader for every SDK. A block type needs none of that: the pipeline is
+   * already here, every surface already renders blocks, and the read envelope
+   * already tolerates a type it does not know from a newer server. It also
+   * puts the citations in the same bubble as the sentence they support, which
+   * is where a reader looks for them.
+   *
+   * ── What may NOT go in here ───────────────────────────────────────────
+   *
+   * The `articleId`. It is a workspace's internal identifier and this block
+   * is rendered to a VISITOR; a renderer handed one would sooner or later
+   * build a dashboard link out of it, which is the defect this block exists
+   * to replace. The agent resolves an id to a public help-centre address
+   * before the block is built, and a hit with no public address is cited by
+   * title alone — see `sourceSchema`.
+   *
+   * `items` is `.min(1)` for the reason every other collection here is: a
+   * citation list with nothing in it is a heading over a blank space, and the
+   * read path drops such a block rather than drawing one.
+   */
+  z
+    .object({
+      type: z.literal('sources'),
+      id: blockId.optional(),
+      items: z.array(sourceSchema).min(1).max(MAX_SOURCES),
+    })
+    .strict(),
   tableBlockSchema,
   placeBlockSchema,
   z.object({ type: z.literal('divider'), id: blockId.optional() }).strict(),
@@ -476,6 +521,7 @@ export type {
   WidgetCardVariant,
   WidgetGridMore,
   WidgetOrderStatusStep,
+  WidgetSource,
 } from './block-values.js';
 export type { WidgetCardModel, WidgetGridPlacement, WidgetPlaceBlock } from './spatial-schema.js';
 export type WidgetBlocksEnvelope = z.infer<typeof widgetBlocksEnvelopeSchema>;

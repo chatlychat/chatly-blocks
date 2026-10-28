@@ -1,6 +1,6 @@
 {
   "name": "@chatlychat/blocks",
-  "version": "0.2.0",
+  "version": "0.4.0",
   "description": "Build and check Chatly block envelopes: typed blocks, cards and actions, small builders, and validate() that returns exactly what the server would refuse. Isomorphic, zero dependencies.",
   "license": "MIT",
   "homepage": "https://github.com/chatlychat/chatly-blocks#readme",
@@ -43,8 +43,8 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "verify:pack": "node ../../scripts/verify-package-tarball.mjs packages/blocks",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && vitest run"
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
+    "test": "vitest run"
   },
   "publishConfig": {
     "access": "public",
@@ -55,6 +55,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
+    "@typescript/native-preview": "^7.0.0-dev.20251023.1",
     "typescript": "^5.6.2",
     "vite": "^5.4.8",
     "vitest": "^2.1.2",

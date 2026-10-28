@@ -9,6 +9,7 @@ export {
   MAX_FIELDS_PER_BLOCK,
   MAX_ORDER_STATUS_STEPS,
   MAX_QUICK_REPLIES,
+  MAX_SOURCES,
   MAX_TABLE_COLUMNS,
   MAX_TABLE_ROWS,
   MAX_VARIANTS_PER_CARD,
@@ -25,6 +26,7 @@ export {
   type WidgetGridPlacement,
   type WidgetOrderStatusStep,
   type WidgetPlaceBlock,
+  type WidgetSource,
 } from './schema.js';
 export { positionalActionId, widgetActionSchema, type WidgetAction } from './actions.js';
 export {

@@ -264,6 +264,30 @@ export function blocksToPlainText(envelope: WidgetBlocksEnvelope): string {
         }
         break;
       }
+      case 'sources':
+        /*
+         * `Source: Refund policy (https://help.example.com/a/refunds)`.
+         *
+         * Included, and the URL is kept here where `media` deliberately drops
+         * one. A media URL is a CDN address nobody reads; this is the whole
+         * point of the block — on SMS, in the e-mail text part and in a push
+         * preview, the link is what lets the customer check the answer, and a
+         * citation reduced to a bare title on a text-only channel tells them
+         * an article exists and not where it is.
+         *
+         * `Source:` singular per line rather than one `Sources:` heading,
+         * because every other arm of this switch emits one self-describing
+         * line per item and a heading with its list split across lines reads
+         * as a dangling word when a channel truncates.
+         */
+        for (const item of block.items) {
+          lines.push(
+            item.url === undefined
+              ? `Source: ${item.title}`
+              : `Source: ${item.title} (${item.url})`,
+          );
+        }
+        break;
       case 'place':
         /*
          * A destination, in words: `Place: Nike store, front door (Level 2,

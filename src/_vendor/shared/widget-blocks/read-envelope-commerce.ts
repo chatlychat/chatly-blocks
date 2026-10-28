@@ -32,6 +32,7 @@
  * importer anywhere — including the widget's `commerce-chunk.ts`, which takes
  * it from the `widget-blocks/read-envelope` subpath — had to change.
  */
+import { isSafeActionHref } from './href-guard.js';
 import { isBag, readAction, str, type Bag } from './read-primitives.js';
 
 import type { WidgetBlock, WidgetBlocksEnvelope } from './schema.js';
@@ -179,6 +180,57 @@ function extendCard(card: Bag): void {
  * survived — which happens when the only block was an `order_status` whose
  * steps are all unreadable.
  */
+/**
+ * A `sources` block, read — the base reader passes it through untouched.
+ *
+ * `read-envelope.ts` puts `sources` on the same arm as `order_status` and for
+ * the same reason: the only thing that draws a citation lives in
+ * `widget-commerce.js`, so reading it in the base cost `widget.js` 37 gzipped
+ * bytes (measured) for a check nothing at first paint can reach. This is
+ * therefore the ONLY place a `sources` item is validated at all.
+ *
+ * Two rules, and they differ:
+ *
+ *   - **no readable `title`** → the item goes. A link with no words is a
+ *     citation nobody can evaluate. No readable item → the block goes, which
+ *     is `quick_replies`' rule and `order_status`' rule below.
+ *   - **no safe `url`** → the url goes and the TITLE STAYS. That is
+ *     `card.image`'s rule inverted on purpose: a card without its image is a
+ *     broken card, while a citation without its link still says where the
+ *     answer came from. `publicArticleUrl` in
+ *     `apps/worker/src/lib/kb-retrieval.ts` legitimately returns nothing for
+ *     an article that grounds an answer without being published (migration
+ *     0417), so "a title with no link" is a real state rather than only a
+ *     failure mode — and the alternative, a dashboard URL, is a sign-in page
+ *     for the person being told to go and read it.
+ *
+ * A COPY, not a mutation, for the reason the `order_status` arm states.
+ */
+function readSourcesBlock(bag: Bag): WidgetBlock | null {
+  const raws = bag['items'];
+  const items = (Array.isArray(raws) ? raws : [])
+    .filter((e) => isBag(e) && str(e['title']))
+    .map((e: Bag) => {
+      if (str(e['url']) && isSafeActionHref(e['url'])) {
+        return e;
+      }
+      /*
+       * A COPY with `url` deleted, not `{ title }` rebuilt from scratch —
+       * which is what this was first written as, and `read-envelope.spec.ts`
+       * caught it. `sourceSchema` is `.strict()`, so title and url are the
+       * only keys a WRITER can send today; a reader has to survive a LATER
+       * server sending `sources[].publishedAt`, and rebuilding the item would
+       * blank that on a dashboard tab running the previous bundle. The
+       * forward-rollout rule every other reader here obeys, and `readVariants`
+       * above is the same idiom.
+       */
+      const item: Bag = { ...e };
+      delete item['url'];
+      return item;
+    });
+  return items.length > 0 ? ({ ...bag, items } as unknown as WidgetBlock) : null;
+}
+
 export function extendCommerceBlocks(envelope: WidgetBlocksEnvelope): WidgetBlocksEnvelope | null {
   const blocks: WidgetBlock[] = [];
   for (const block of envelope.blocks) {
@@ -197,6 +249,12 @@ export function extendCommerceBlocks(envelope: WidgetBlocksEnvelope): WidgetBloc
           bag['more'] = more;
         }
       }
+    } else if (bag['type'] === 'sources') {
+      const read = readSourcesBlock(bag);
+      if (read !== null) {
+        blocks.push(read);
+      }
+      continue;
     } else if (bag['type'] === 'order_status') {
       const steps = readTimelineSteps(bag['steps']);
       // No readable step is no timeline: a bordered blank space where the

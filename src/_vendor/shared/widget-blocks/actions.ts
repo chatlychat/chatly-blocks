@@ -1,7 +1,7 @@
 /**
  * What a block's button may do.
  *
- * Six kinds and deliberately no `custom`. A `custom` kind carrying a code
+ * Seven kinds and deliberately no `custom`. A `custom` kind carrying a code
  * string is arbitrary execution with extra steps, and this repo has already
  * shipped XSS twice through raw-HTML sinks.
  *
@@ -11,12 +11,14 @@
  * card still renders for an agent on takeover, where the event has no
  * listener.
  *
- * `step` is the fifth, and it is the one kind whose work happens on OUR
- * server: it asks the workspace's canvas endpoint for an interactive step and
+ * `step` and `cards` are the two kinds whose work happens on OUR server.
+ * `step`: it asks the workspace's canvas endpoint for an interactive step and
  * posts the answer into the thread. A card could already carry a `postback`
  * that a bot turns into a step, but that round trip goes through a model and
  * is therefore neither certain nor fast — and a buy flow's confirm step has to
- * be both.
+ * be both. `cards` asks the operator's registered customer-card endpoint for
+ * this visitor's own data — orders, invoices, a subscription — and posts the
+ * blocks it answers with into the thread.
  */
 import { z } from 'zod';
 
@@ -247,6 +249,47 @@ const stepActionSchema = z
   .strict();
 
 /**
+ * `cards` — ask the operator's OWN backend for this visitor's data and post
+ * it into the thread.
+ *
+ * The seventh kind, and the second whose work happens on our server. It is
+ * what makes a "My orders" button real: the operator already registers a
+ * signed endpoint under `/v1/customer-cards`, that endpoint already answers
+ * in `WidgetBlock[]`, and the only thing missing was a visitor-side caller.
+ *
+ * ── Why not `postback` with a bot ────────────────────────────────
+ *
+ * The same argument `step` makes above. A bot CAN turn a postback into an
+ * order list, but that round trip goes through a model, so it is neither
+ * certain nor fast, and "where is my order" is a question whose answer is a
+ * database row rather than a judgement.
+ *
+ * ── `cardKey` SELECTS, it does not address ───────────────────────
+ *
+ * The visitor names a key, never a URL or a path — the same asymmetry
+ * `canvas-endpoint.ts` documents for `canvasId`. A key resolves against the
+ * operator's own `customer_cards` rows, and only those with
+ * `visitor_visible` set (migration 0687), so the most a visitor can do is
+ * ask for a card their operator published. Every card predating that column
+ * is invisible here.
+ *
+ * Not in `cardTapActionSchema` below, for the reason `copy` is not: tapping
+ * a product photo to load your order history is not a thing anybody expects.
+ * This is a BUTTON.
+ */
+const cardsActionSchema = z
+  .object({
+    kind: z.literal('cards'),
+    label,
+    id: actionId.optional(),
+    /** An operator's `customer_cards.key`. Same shape as `canvasIdRef`. */
+    cardKey: canvasIdRef,
+    style,
+    icon: actionIcon,
+  })
+  .strict();
+
+/**
  * `navigate` — go to a page of the integrator's OWN site, by path.
  *
  * A `url` action cannot say "the pricing page" without the integrator
@@ -287,6 +330,7 @@ export const widgetActionSchema = z.discriminatedUnion('kind', [
   postbackActionSchema,
   hostEventActionSchema,
   stepActionSchema,
+  cardsActionSchema,
   navigateActionSchema,
   z
     .object({

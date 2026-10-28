@@ -94,8 +94,15 @@ export const moneySchema = z
  *
  * Every marketplace on this format hand-rolls these out of `fields` today,
  * which renders as a read-only `Size: US 10` row: the shopper cannot pick,
- * and nothing downstream knows the card had options at all. Typed, the widget
- * renders a `<select>` and the agent inbox can show what was offered.
+ * and nothing downstream knows the card had options at all.
+ *
+ * Typed, the web widget draws a row of CHIPS the shopper picks from (not a
+ * `<select>`, which this said until 2026-10-28 and which no surface has ever
+ * rendered — a native select inside a shadow root draws its option list in
+ * the top layer with the host page's styling), and the chosen `value` rides
+ * on the next action they press, under `variant` inside its own
+ * `payload`/`data`/`params`. Every other surface shows what was offered and
+ * nothing more; `apps/widget/src/blocks/variant-pick.ts` is the whole of it.
  *
  * `label` is what the shopper reads and `value` is what a program receives,
  * exactly as on a quick reply and for the same reason — and the bounds are
@@ -199,3 +206,45 @@ export type WidgetCardVariant = z.infer<typeof variantSchema>;
 export type WidgetCardStock = z.infer<typeof stockSchema>;
 export type WidgetGridMore = z.infer<typeof gridMoreSchema>;
 export type WidgetOrderStatusStep = z.infer<typeof orderStatusStepSchema>;
+
+/**
+ * Articles cited under one answer.
+ *
+ * Five, and the number is the retrieval's rather than the panel's:
+ * `autonomous-agent.ts` asks for `topK: 5`, so five is every article the
+ * model could possibly have been shown in one run. A cap above that would
+ * only ever be reached by an author assembling a reading list, and a list of
+ * references longer than the answer stops being provenance.
+ */
+export const MAX_SOURCES = 5;
+
+/**
+ * One cited article: what it is called, and where a VISITOR can read it.
+ *
+ * ── `url` is optional, and that is the feature rather than a gap ────────
+ *
+ * `publicArticleUrl` in `apps/worker/src/lib/kb-retrieval.ts` returns nothing
+ * for an article that is not `published` or has no slug — migration 0417
+ * exists so a crawled URL or an uploaded PDF can ground an answer without
+ * appearing on the customer's public help centre, and such an article has no
+ * address to hand out. The answer to that is a title with no link, never a
+ * link to somewhere the visitor cannot go: a dashboard URL is a sign-in page
+ * for the person being told to read it.
+ *
+ * So every renderer draws the title and makes it a link only when there is
+ * one. That ruling is in the READER as well — an unsafe or unreadable `url`
+ * drops the url and keeps the title, which is `card.image`'s rule.
+ *
+ * Capped at 2000 because `isSafeActionHref` refuses anything longer, and a
+ * write boundary that accepts what the read boundary will drop is a stored
+ * row that renders differently from the thing the author sent.
+ */
+export const sourceSchema = z
+  .object({
+    // `fieldSchema.label`'s bound is 80; an article title is a sentence.
+    title: z.string().min(1).max(200),
+    url: z.string().min(1).max(2000).optional(),
+  })
+  .strict();
+
+export type WidgetSource = z.infer<typeof sourceSchema>;

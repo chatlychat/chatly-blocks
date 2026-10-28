@@ -411,12 +411,43 @@ function readBlock(raw: unknown): WidgetBlock | null {
      * made the field unreachable: first paint has to SEE the block to know it
      * must fetch the chunk that draws it.
      */
+    /*
+     * `sources` passes through unread for the same reasons and with the same
+     * consequence. Its `items` are validated by `extendCommerceBlocks`,
+     * which drops the block when no item survives, so `readBlocksEnvelope`
+     * is unchanged; what the base reader alone returns is a block whose
+     * titles nobody has checked and whose `url` has not been through
+     * `isSafeActionHref`. **Nothing in first paint may render either.** The
+     * widget draws nothing for this type until the commerce chunk lands, and
+     * the plain-text body carries the citations meanwhile —
+     * `blocksToPlainText` renders every one, which on SMS is all the
+     * customer ever gets.
+     *
+     * Reading it here instead was built and measured: 37 gzipped bytes of
+     * `widget.js` for a check nothing at first paint can reach, against a
+     * ceiling that has never moved.
+     */
     case 'order_status':
+    case 'sources':
     case 'divider':
       return raw as unknown as WidgetBlock;
     // `place` is a block TYPE, so the base keeps it; see `read-spatial.ts`.
     case 'place':
-      return str(raw['label']) ? ({ ...raw } as unknown as WidgetBlock) : null;
+      /*
+       * `raw`, not `{ ...raw }`, like every other pass-through arm here.
+       *
+       * The copy was load-bearing and is now made where the MUTATION is:
+       * `extendSpatial` deletes a non-string `detail`/`ref` in place, and
+       * `spatial.spec.ts` pins that the caller's own object survives it. But
+       * that pass runs only in `readBlocksEnvelope` below — never in
+       * `readBlocksEnvelopeBase`, which is the widget's first paint. So this
+       * arm was paying 6 gzipped bytes on every page view of every customer
+       * site to protect a mutation first paint cannot perform. Copying in the
+       * composed reader costs first paint nothing and puts the copy next to
+       * the thing it guards, which is where `extendCommerceBlocks`' own
+       * `order_status` copy already lives.
+       */
+      return str(raw['label']) ? (raw as unknown as WidgetBlock) : null;
     default:
       // An unknown type is expected, not exceptional: an old client meets a
       // newer server. Drop it and render the rest.
@@ -448,10 +479,24 @@ export function readBlocksEnvelopeBase(raw: unknown): WidgetBlocksEnvelope | nul
 export function readBlocksEnvelope(raw: unknown): WidgetBlocksEnvelope | null {
   const base = readBlocksEnvelopeBase(raw);
   const envelope = base === null ? null : extendCommerceBlocks(base);
-  // The spatial pass is composed HERE and not inside `extendCommerceBlocks`,
-  // so the widget's commerce chunk (which imports only that) carries none of it.
-  envelope?.blocks.forEach((block) => {
-    extendSpatial(block as unknown as Bag);
+  if (envelope === null) {
+    return null;
+  }
+  /*
+   * The spatial pass is composed HERE and not inside `extendCommerceBlocks`,
+   * so the widget's commerce chunk (which imports only that) carries none of
+   * it.
+   *
+   * A `place` block is COPIED first, because `extendSpatial` mutates and the
+   * base reader hands that type back as the caller's own object — see its arm
+   * for why the copy moved out of there. Only `place`: the two other types
+   * `extendSpatial` touches are `card` and `card_grid`, whose bodies
+   * `readCard` has already rebuilt.
+   */
+  const blocks = envelope.blocks.map((block) => {
+    const bag = (block.type === 'place' ? { ...block } : block) as unknown as Bag;
+    extendSpatial(bag);
+    return bag as unknown as WidgetBlock;
   });
-  return envelope;
+  return { v: envelope.v, blocks };
 }
